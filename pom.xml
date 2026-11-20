@@ -6,7 +6,7 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>3.4.2</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<relativePath/>
 	</parent>
 	<groupId>com.breadhardit</groupId>
 	<artifactId>travel-agency-kata</artifactId>
@@ -18,7 +18,18 @@
 		<license/>
 	</licenses>
 	<developers>
-		<developer/>
+		<developer>
+			<id>alvaroomoreno</id>
+			<name>Álvaro Moreno</name>
+			<email>alvaro.morenof@edu.uah.es</email>
+			<url>https://github.com/alvaroomoreeno</url>
+		</developer>
+		<developer>
+			<id>FaKeEr1c</id>
+			<name>Eric Briceag</name>
+			<email>eric.briceag@edu.uah.es</email>
+			<url>https://github.com/FaKeEr1c</url>
+		</developer>
 	</developers>
 	<scm>
 		<connection/>

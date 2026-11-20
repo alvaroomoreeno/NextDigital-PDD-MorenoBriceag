@@ -2,6 +2,15 @@
 
 Aplicación Spring Boot para gestionar clientes de una agencia de viajes. El proyecto utiliza Java 21, Maven, Spring Web y Spring Data JPA, organizado en capas siguiendo una arquitectura hexagonal.
 
+## Autores
+
+Este proyecto ha sido desarrollado conjuntamente por:
+
+- **Álvaro Moreno** — [@alvaroomoreeno](https://github.com/alvaroomoreeno) · alvaro.morenof@edu.uah.es
+- **Eric Briceag** — [@FaKeEr1c](https://github.com/FaKeEr1c) · eric.briceag@edu.uah.es
+
+Ambos figuran como autores del proyecto en igualdad de condiciones.
+
 ## Requisitos previos
 
 - JDK 21.
