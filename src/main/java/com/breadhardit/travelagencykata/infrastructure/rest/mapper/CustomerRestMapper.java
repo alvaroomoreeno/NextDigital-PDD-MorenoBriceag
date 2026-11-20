@@ -9,6 +9,7 @@ public class CustomerRestMapper {
 
     public GetCustomerDTO toDto(Customer customer) {
         return GetCustomerDTO.builder()
+                .id(customer.getId())
                 .name(customer.getName())
                 .surnames(customer.getSurnames())
                 .birthDate(customer.getBirthDate())
