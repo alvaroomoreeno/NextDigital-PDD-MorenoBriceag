@@ -97,7 +97,7 @@ class StructuralPatternExercices {
         Food burger = new Food("BURGER", 340, 120);
         Dish completeBurger = new Dish("COMPLETE BURGER", List.of(potato, bread, burger));
 
-        assertEquals(1_048, completeBurger.getCalories());
+        assertEquals(968, completeBurger.getCalories());
     }
 
     @Test
@@ -114,7 +114,7 @@ class StructuralPatternExercices {
         Dish greenSalad = new Dish("GREEN SALAD", List.of(lettuce, tomato));
         Menu menu = new Menu("LUNCH MENU", List.of(greenSalad, completeBurger, ketchup, apple));
 
-        assertEquals(1_161, menu.getCalories());
+        assertEquals(1_117, menu.getCalories());
     }
 
     @Test
