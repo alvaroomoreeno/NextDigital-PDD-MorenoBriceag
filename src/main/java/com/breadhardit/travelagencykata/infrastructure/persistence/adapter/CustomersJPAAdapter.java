@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -43,8 +44,9 @@ public class CustomersJPAAdapter implements CustomersRepository {
                 .surnames(customer.getSurnames())
                 .birthDate(customer.getBirthDate())
                 .passportNumber(customer.getPassportNumber())
-                .enrollmentDate(customer.getEnrollmentDate())
-                .active(customer.getActive())
+                .enrollmentDate(customer.getEnrollmentDate() != null
+                        ? customer.getEnrollmentDate() : LocalDate.now())
+                .active(customer.getActive() != null ? customer.getActive() : Boolean.FALSE)
                 .build();
     }
 
