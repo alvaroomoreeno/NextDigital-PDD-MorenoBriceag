@@ -6,6 +6,7 @@ import com.breadhardit.travelagencykata.application.port.CustomersRepository;
 import com.breadhardit.travelagencykata.domain.Customer;
 import com.breadhardit.travelagencykata.infrastructure.rest.dto.GetCustomerDTO;
 import com.breadhardit.travelagencykata.infrastructure.rest.dto.PutCustomerDTO;
+import com.breadhardit.travelagencykata.infrastructure.rest.mapper.CustomerRestMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -21,12 +22,13 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class CustomersController {
 
-    final CustomersRepository customersRepository;
+    private final CustomersRepository customersRepository;
+    private final CustomerRestMapper customerRestMapper;
 
     @PutMapping("/customers")
     @Transactional
-    public ResponseEntity putCustomer(@RequestBody PutCustomerDTO customer) {
-        log.info("POST customer {}", customer);
+    public ResponseEntity<Void> putCustomer(@RequestBody PutCustomerDTO customer) {
+        log.info("Creating customer {}", customer);
         CreateCustomerCommand command = CreateCustomerCommand.builder()
                 .name(customer.getName())
                 .surnames(customer.getSurnames())
@@ -42,36 +44,29 @@ public class CustomersController {
     }
 
     @GetMapping("/customers/{customer-id}")
-    public ResponseEntity getCustomer(@PathVariable String customerId) {
+    public ResponseEntity<GetCustomerDTO> getCustomer(@PathVariable String customerId) {
         log.info("Getting the customer {}", customerId);
         Optional<Customer> customer = GetCustomerQuery.builder()
                 .customersRepository(customersRepository)
                 .id(customerId)
                 .build().handle();
-        return customer.isEmpty() ? ResponseEntity.noContent().build()
-                : ResponseEntity.ok(GetCustomerDTO.builder()
-                .name(customer.get().getName())
-                .surnames(customer.get().getSurnames())
-                .birthDate(customer.get().getBirthDate())
-                .passportNumber(customer.get().getPassportNumber())
-                .build());
+
+        return customer.map(customerRestMapper::toDto)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
+
     @GetMapping("/customers")
-    public ResponseEntity getCustomers(@RequestParam(name = "passport-number") String passportNumber) {
-        log.info("Getting the customer with the passport {}",passportNumber);
+    public ResponseEntity<List<GetCustomerDTO>> getCustomers(
+            @RequestParam(name = "passport-number") String passportNumber) {
+        log.info("Getting the customer with the passport {}", passportNumber);
         Optional<Customer> customer = GetCustomerQuery.builder()
                 .customersRepository(customersRepository)
                 .passport(passportNumber)
                 .build().handle();
-        return customer.isEmpty() ? ResponseEntity.noContent().build() :
-                ResponseEntity.ok(
-                  List.of(GetCustomerDTO.builder()
-                          .name(customer.get().getName())
-                          .surnames(customer.get().getSurnames())
-                          .birthDate(customer.get().getBirthDate())
-                          .passportNumber(customer.get().getPassportNumber())
-                          .build())
-                );
-    }
 
+        return customer.map(customerRestMapper::toDto)
+                .map(dto -> ResponseEntity.ok(List.of(dto)))
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
 }

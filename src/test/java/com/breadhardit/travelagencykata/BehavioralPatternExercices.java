@@ -1,111 +1,167 @@
 package com.breadhardit.travelagencykata;
 
-import com.breadhardit.travelagencykata.domain.Customer;
-import lombok.*;
-import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.UUID;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+import java.util.concurrent.CopyOnWriteArrayList;
 
-@Slf4j
-public class BehavioralPatternExercices {
-    /* EXERCISE 1
-        Travels has an origin and a destination. Travels have some restrictions:
-        - Travels with origin and destination in the same country require only Identity Document
-        - Travels with origin and destination in schengen space, requires Passport
-        - Travels with origin or destination out of schengen space, requires Visa
-     */
-    @Data
-    public static class Travel {
-        public static final List<String> SCHENGEN_COUNTRIES = List.of("Spain","France","Iceland","Italy","Portugal");
-        String id;
-        String name;
-        String origin;
-        String destination;
-        Boolean sameCountryTravel = Boolean.FALSE;
-        Boolean schengenSpaceTravel = Boolean.FALSE;
-        Boolean visaRequiredTravel = Boolean.FALSE;
-        public Travel(String id,String name,String origin,String destination) {
-            if (origin.equals(destination)) this.sameCountryTravel = Boolean.TRUE;
-            else if (SCHENGEN_COUNTRIES.contains(origin) && SCHENGEN_COUNTRIES.contains(destination)) this.schengenSpaceTravel = Boolean.TRUE;
-            else this.visaRequiredTravel = Boolean.TRUE;
-        }
-    }
-    public static void scanVisa() {
-        log.info("Applying visa...");
-    }
-    public static void scanDNI() {
-        log.info("Applying DNI...");
-    }
-    public static void scanPassport() {
-        log.info("Applying Passport");
-    }
-    @Test
-    // When customer buy a new Travel we have to scan the proper documentation
-    public void travelAgency() {
-        List<Travel> travels = List.of(
-                new Travel(UUID.randomUUID().toString(),"PYRAMIDS TOUR","Spain","EGYPT"),
-                new Travel(UUID.randomUUID().toString(),"LISBOA TOUR","Spain","Portugal"),
-                new Travel(UUID.randomUUID().toString(),"LISBOA TOUR","Portugal","Portugal")
-        );
-        for (Travel travel: travels) {
-            if (travel.visaRequiredTravel) scanVisa();
-            else if (travel.schengenSpaceTravel) scanPassport();
-            else if (travel.sameCountryTravel) scanDNI();
-        }
-    }
-    // Refactor code using the proper structural pattern
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+class BehavioralPatternExercices {
 
     /*
-     * When a new employee is enrolled, company sends a greetins e-mail.
-     * A notification service is querying the database every second looking for new employees to notify
+     * EXERCISE 1 — Strategy
+     *
+     * A trip requires an identity document for domestic travel, a passport
+     * for travel within the Schengen area, and a visa otherwise.
      */
-    @Builder
-    @Data
-    public static class Employee {
-        final String id;
-        final String name;
-        final String email;
-        @Builder.Default
-        Boolean greetingDone = Boolean.FALSE;
+    enum TravelDocument {
+        IDENTITY_DOCUMENT,
+        PASSPORT,
+        VISA
     }
-    public static class EmployeesRepository{
-        private static final ConcurrentHashMap<String,Employee> EMPLOYEES = new ConcurrentHashMap<>();
-        public void addEmployee(Employee employee) {
-            EMPLOYEES.put(employee.getId(),employee);
+
+    record Travel(String id, String name, String origin, String destination) {
+    }
+
+    interface TravelDocumentationStrategy {
+        boolean supports(Travel travel);
+
+        TravelDocument requiredDocument();
+    }
+
+    static class SameCountryStrategy implements TravelDocumentationStrategy {
+        @Override
+        public boolean supports(Travel travel) {
+            return travel.origin().equalsIgnoreCase(travel.destination());
         }
-        public List<Employee> getUnnotifiedEmployees() {
-            return EMPLOYEES.values().stream().filter(e -> !e.greetingDone).toList();
+
+        @Override
+        public TravelDocument requiredDocument() {
+            return TravelDocument.IDENTITY_DOCUMENT;
         }
     }
-    @Value
-    @AllArgsConstructor
-    public static class GreetingsNotificator {
-        EmployeesRepository employeesRepository;
-        @SneakyThrows
-        public void applyNotifications() {
-            while (true) {
-                log.info("Aplying notifications");
-                List<Employee> employeesToNotify = employeesRepository.getUnnotifiedEmployees();
-                employeesToNotify.forEach(e -> {log.info("Notifying {}", e);e.setGreetingDone(Boolean.TRUE);});
-                Thread.sleep(100);
+
+    static class SchengenTravelStrategy implements TravelDocumentationStrategy {
+        private static final Set<String> SCHENGEN_COUNTRIES =
+                Set.of("Spain", "France", "Iceland", "Italy", "Portugal");
+
+        @Override
+        public boolean supports(Travel travel) {
+            return !travel.origin().equalsIgnoreCase(travel.destination())
+                    && SCHENGEN_COUNTRIES.contains(travel.origin())
+                    && SCHENGEN_COUNTRIES.contains(travel.destination());
+        }
+
+        @Override
+        public TravelDocument requiredDocument() {
+            return TravelDocument.PASSPORT;
+        }
+    }
+
+    static class VisaRequiredStrategy implements TravelDocumentationStrategy {
+        @Override
+        public boolean supports(Travel travel) {
+            return true;
+        }
+
+        @Override
+        public TravelDocument requiredDocument() {
+            return TravelDocument.VISA;
+        }
+    }
+
+    static class TravelDocumentationResolver {
+        private final List<TravelDocumentationStrategy> strategies;
+
+        TravelDocumentationResolver() {
+            // Order matters: the fallback visa strategy must be evaluated last.
+            this.strategies = List.of(
+                    new SameCountryStrategy(),
+                    new SchengenTravelStrategy(),
+                    new VisaRequiredStrategy()
+            );
+        }
+
+        TravelDocument resolve(Travel travel) {
+            return strategies.stream()
+                    .filter(strategy -> strategy.supports(travel))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("No documentation strategy found"))
+                    .requiredDocument();
+        }
+    }
+
+    @Test
+    void selectsTheRequiredDocumentForEachTravelType() {
+        TravelDocumentationResolver resolver = new TravelDocumentationResolver();
+
+        assertEquals(TravelDocument.VISA,
+                resolver.resolve(new Travel("1", "Pyramids tour", "Spain", "Egypt")));
+        assertEquals(TravelDocument.PASSPORT,
+                resolver.resolve(new Travel("2", "Lisboa tour", "Spain", "Portugal")));
+        assertEquals(TravelDocument.IDENTITY_DOCUMENT,
+                resolver.resolve(new Travel("3", "Domestic tour", "Portugal", "Portugal")));
+    }
+
+    /*
+     * EXERCISE 2 — Observer
+     *
+     * Employee enrollment publishes an event. Interested observers are
+     * notified immediately, avoiding a background thread that polls storage.
+     */
+    record Employee(String id, String name, String email) {
+    }
+
+    @FunctionalInterface
+    interface EmployeeObserver {
+        void onEmployeeEnrolled(Employee employee);
+    }
+
+    @FunctionalInterface
+    interface GreetingSender {
+        void sendGreeting(Employee employee);
+    }
+
+    static class EmployeesRepository {
+        private final ConcurrentHashMap<String, Employee> employees = new ConcurrentHashMap<>();
+        private final CopyOnWriteArrayList<EmployeeObserver> observers = new CopyOnWriteArrayList<>();
+
+        void subscribe(EmployeeObserver observer) {
+            observers.add(observer);
+        }
+
+        void addEmployee(Employee employee) {
+            Employee existing = employees.putIfAbsent(employee.id(), employee);
+            if (existing == null) {
+                observers.forEach(observer -> observer.onEmployeeEnrolled(employee));
             }
         }
     }
-    @Test
-    @SneakyThrows
-    public void companyTest() {
-        EmployeesRepository employeesRepository = new EmployeesRepository();
-        GreetingsNotificator greetingsNotificator = new GreetingsNotificator(employeesRepository);
-        new Thread(() -> greetingsNotificator.applyNotifications()).start();
-        Thread.sleep(200);
-        employeesRepository.addEmployee(Employee.builder().id("1").name("Pepe").email("pepe@pepemail.com").build());
-        Thread.sleep(200);
-        employeesRepository.addEmployee(Employee.builder().id("2").name("Juan").email("pepe@pepemail.com").build());
+
+    record GreetingsNotificator(GreetingSender greetingSender) implements EmployeeObserver {
+        @Override
+        public void onEmployeeEnrolled(Employee employee) {
+            greetingSender.sendGreeting(employee);
+        }
     }
-    // Use the proper behavioral pattern to avoid the continuous querying to database
+
+    @Test
+    void notifiesObserversWhenAnEmployeeIsEnrolledWithoutPolling() {
+        EmployeesRepository repository = new EmployeesRepository();
+        List<String> greetedEmployees = new CopyOnWriteArrayList<>();
+        GreetingsNotificator notificator =
+                new GreetingsNotificator(employee -> greetedEmployees.add(employee.email()));
+        repository.subscribe(notificator);
+
+        Employee pepe = new Employee("1", "Pepe", "pepe@example.com");
+        Employee juan = new Employee("2", "Juan", "juan@example.com");
+        repository.addEmployee(pepe);
+        repository.addEmployee(juan);
+        repository.addEmployee(pepe); // Re-inserting the same id must not emit a second event.
+
+        assertEquals(List.of("pepe@example.com", "juan@example.com"), greetedEmployees);
+    }
 }

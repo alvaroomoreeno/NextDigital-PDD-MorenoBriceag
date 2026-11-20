@@ -1,63 +1,135 @@
 package com.breadhardit.travelagencykata;
 
-import lombok.Value;
-import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
-@Slf4j
-public class StructuralPatternExercices {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+class StructuralPatternExercices {
+
     /*
-     * We have a calories-counter API. The users can ask how much calories food have.
-     * User can ask for a list of items. And this item's can be dishes or ingredients.
-     * A dish has a list of ingredients, and each ingredient has calories.
-     * Te number of calories to return in a query is the summary of the calories of
-     * the elements queried
+     * Composite pattern:
+     * A menu can contain individual foods and dishes. A dish can itself contain
+     * menu components, so callers calculate calories through one abstraction.
      */
-    @Value
-    public static class Food {
-        String name;
-        Long caloresPer100g;
-        Long weight;
-        Long getCalories() {
-            return caloresPer100g * weight;
+
+    interface MenuComponent {
+        String name();
+
+        long getCalories();
+    }
+
+    record Food(String name, long caloriesPer100g, long weightInGrams) implements MenuComponent {
+        Food {
+            if (name == null || name.isBlank()) {
+                throw new IllegalArgumentException("Food name is required");
+            }
+            if (caloriesPer100g < 0 || weightInGrams < 0) {
+                throw new IllegalArgumentException("Calories and weight cannot be negative");
+            }
+        }
+
+        @Override
+        public long getCalories() {
+            return caloriesPer100g * weightInGrams / 100;
         }
     }
-    @Value
-    public static class Dish {
-        String name;
-        List<Food> foodList;
-        public void addIngredient(Food food) {
-            this.foodList.add(food);
+
+    static class Dish implements MenuComponent {
+        private final String name;
+        private final List<MenuComponent> components;
+
+        Dish(String name, List<MenuComponent> components) {
+            if (name == null || name.isBlank()) {
+                throw new IllegalArgumentException("Dish name is required");
+            }
+            this.name = name;
+            this.components = List.copyOf(components);
         }
-        // Returns the calories of the dish as the sum of calories of each Food
-        public Long getCalories() {
-            return this.foodList.stream().collect(Collectors.summarizingLong(Food::getCalories)).getSum();
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public long getCalories() {
+            return components.stream().mapToLong(MenuComponent::getCalories).sum();
         }
     }
-    public Long getCalores() {
-        /* TODO
-         * Refactor classes and codify a method which returns the sum of calories of a Menu.
-         * A menu can is a list of Dishes, or individuals Food, see following example
-         * Use the proper structural pattern
-         */
-        return 0L;
+
+    static class Menu implements MenuComponent {
+        private final String name;
+        private final List<MenuComponent> components;
+
+        Menu(String name, List<MenuComponent> components) {
+            if (name == null || name.isBlank()) {
+                throw new IllegalArgumentException("Menu name is required");
+            }
+            this.name = name;
+            this.components = List.copyOf(components);
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public long getCalories() {
+            return components.stream().mapToLong(MenuComponent::getCalories).sum();
+        }
     }
+
     @Test
-    public void testCalories() {
-        Food potato = new Food("POTATO", 80L, 300L);
-        Food bread = new Food("BREAD", 320L, 100L);
-        Food tomato = new Food("TOMATO", 85L, 50L);
-        Food burger = new Food("BURGER", 340L, 120L);
-        Food lettuce = new Food("LETTUCE", 16L, 120L);
-        Food apple = new Food("APPLE", 34L, 180L);
-        Food ketchup = new Food("KETCHUP", 180L, 15L);
-        Food beer = new Food("BEER", 80L, 330L);
-        Dish completeBuger = new Dish("COMPLETE BURGER", List.of(potato, bread, burger));
+    void calculatesCaloriesForAnIndividualFood() {
+        Food apple = new Food("APPLE", 34, 180);
+
+        assertEquals(61, apple.getCalories());
+    }
+
+    @Test
+    void calculatesCaloriesForADishContainingFoods() {
+        Food potato = new Food("POTATO", 80, 300);
+        Food bread = new Food("BREAD", 320, 100);
+        Food burger = new Food("BURGER", 340, 120);
+        Dish completeBurger = new Dish("COMPLETE BURGER", List.of(potato, bread, burger));
+
+        assertEquals(968, completeBurger.getCalories());
+    }
+
+    @Test
+    void calculatesCaloriesForAMenuContainingDishesAndIndividualFoods() {
+        Food potato = new Food("POTATO", 80, 300);
+        Food bread = new Food("BREAD", 320, 100);
+        Food burger = new Food("BURGER", 340, 120);
+        Food lettuce = new Food("LETTUCE", 16, 120);
+        Food tomato = new Food("TOMATO", 85, 50);
+        Food ketchup = new Food("KETCHUP", 180, 15);
+        Food apple = new Food("APPLE", 34, 180);
+
+        Dish completeBurger = new Dish("COMPLETE BURGER", List.of(potato, bread, burger));
         Dish greenSalad = new Dish("GREEN SALAD", List.of(lettuce, tomato));
-        List<Object> menu = List.of(greenSalad, completeBuger, ketchup, apple);
-        log.info("Calories: {}", getCalores());
+        Menu menu = new Menu("LUNCH MENU", List.of(greenSalad, completeBurger, ketchup, apple));
+
+        assertEquals(1_117, menu.getCalories());
+    }
+
+    @Test
+    void supportsNestedDishes() {
+        Food tomato = new Food("TOMATO", 85, 100);
+        Food lettuce = new Food("LETTUCE", 16, 100);
+        Dish salad = new Dish("SALAD", List.of(tomato, lettuce));
+        Menu nestedMenu = new Menu("NESTED MENU", List.of(salad, new Food("APPLE", 34, 100)));
+
+        assertEquals(135, nestedMenu.getCalories());
+    }
+
+    @Test
+    void rejectsInvalidFoodData() {
+        assertThrows(IllegalArgumentException.class, () -> new Food(" ", 10, 100));
+        assertThrows(IllegalArgumentException.class, () -> new Food("APPLE", -1, 100));
     }
 }

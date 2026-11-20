@@ -16,14 +16,14 @@ public class GetCustomerQuery {
     @Builder.Default
     String id = "";
     CustomersRepository customersRepository;
+
     public Optional<Customer> handle() {
-        if (!StringUtils.hasText(passport)) {
-            return customersRepository.getCustomerById(id);
+        if (StringUtils.hasText(passport)) {
+            return customersRepository.getCustomerByPassport(passport);
         }
-        if (!StringUtils.hasText(id)) {
-            return customersRepository.getCustomerByPassport(id);
+        if (StringUtils.hasText(id)) {
+            return customersRepository.getCustomerById(id);
         }
         return Optional.empty();
     }
-
 }
