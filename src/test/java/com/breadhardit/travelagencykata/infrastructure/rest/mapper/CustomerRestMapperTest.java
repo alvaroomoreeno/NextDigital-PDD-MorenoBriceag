@@ -27,6 +27,7 @@ class CustomerRestMapperTest {
         GetCustomerDTO result = mapper.toDto(customer);
 
         assertAll(
+                () -> assertEquals("customer-123", result.getId()),
                 () -> assertEquals("Ada", result.getName()),
                 () -> assertEquals("Lovelace", result.getSurnames()),
                 () -> assertEquals(birthDate, result.getBirthDate()),
