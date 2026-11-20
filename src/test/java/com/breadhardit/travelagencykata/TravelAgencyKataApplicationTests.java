@@ -1,5 +1,6 @@
 package com.breadhardit.travelagencykata;
 
+import com.breadhardit.travelagencykata.infrastructure.persistence.repository.CustomersJPARepository;
 import com.breadhardit.travelagencykata.infrastructure.rest.CustomersController;
 import com.breadhardit.travelagencykata.infrastructure.rest.dto.PutCustomerDTO;
 import lombok.extern.slf4j.Slf4j;
@@ -21,10 +22,14 @@ import java.util.Objects;
 class TravelAgencyKataApplicationTests {
     @Autowired
     CustomersController customersController;
+
+    @Autowired
+    CustomersJPARepository customersJPARepository;
+
     @BeforeEach
     public void beforeEach() {
-
     }
+
     @Test
     void contextLoads() {
         log.info("Context Loaded");
@@ -32,31 +37,31 @@ class TravelAgencyKataApplicationTests {
 
     @Test
     void givenAUserWhenCreatedThenOK() {
-        // Creates a new customer using the controller method
         var putCustomerResponse = customersController.putCustomer(
-                PutCustomerDTO.builder().name("Pepe").surnames("Perez").birthDate(LocalDate.now()).passportNumber("123").build()
+                PutCustomerDTO.builder().name("Pepe").surnames("Perez")
+                        .birthDate(LocalDate.now()).passportNumber("123").build()
         );
-        // Assert the response is OK
+
         Assertions.assertEquals(HttpStatus.CREATED, putCustomerResponse.getStatusCode());
-        // Assert response has location header
         Assertions.assertTrue(putCustomerResponse.getHeaders().containsKey(HttpHeaders.LOCATION));
-        // Assert id exists in repository, first, obtaining the id from the location
+
         String location = Objects.requireNonNull(putCustomerResponse.getHeaders().getLocation()).getPath();
         String id = location.substring(location.lastIndexOf("/") + 1);
-        // Call get method
+
+        Assertions.assertTrue(customersJPARepository.findById(id).isPresent());
+
         var getCustomerResponse = customersController.getCustomer(id);
         Assertions.assertEquals(HttpStatus.OK, getCustomerResponse.getStatusCode());
         Assertions.assertTrue(getCustomerResponse.hasBody());
-        // Call get by passport method should return 200 with body
+
         var getCustomerByPassportResponse = customersController.getCustomers("123");
-        Assertions.assertEquals(HttpStatus.OK, getCustomerResponse.getStatusCode());
-        Assertions.assertTrue(getCustomerResponse.hasBody());
+        Assertions.assertEquals(HttpStatus.OK, getCustomerByPassportResponse.getStatusCode());
+        Assertions.assertTrue(getCustomerByPassportResponse.hasBody());
     }
+
     @Test
     void givenNonExistingUserThen404() {
         var getCustomerResponse = customersController.getCustomer("POTATO");
-        Assertions.assertEquals(HttpStatus.NO_CONTENT,getCustomerResponse.getStatusCode());
+        Assertions.assertEquals(HttpStatus.NO_CONTENT, getCustomerResponse.getStatusCode());
     }
-
-
 }
