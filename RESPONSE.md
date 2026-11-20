@@ -1,5 +1,7 @@
 # RESPONSE — Principios SOLID y patrones de diseño
 
+**Autoría:** Álvaro Moreno ([GitHub](https://github.com/alvaroomoreeno), alvaro.morenof@edu.uah.es) y Eric Briceag ([GitHub](https://github.com/FaKeEr1c), eric.briceag@edu.uah.es). Ambos han desarrollado este proyecto conjuntamente y figuran como autores en igualdad de condiciones.
+
 Este documento recoge los principios y patrones identificables en la implementación actual de Travel Agency Kata. Los ejemplos hacen referencia al código del repositorio y distinguen los patrones utilizados en la aplicación de los ejercicios de patrones incluidos en los tests.
 
 ## 1. Principios SOLID
