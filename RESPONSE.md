@@ -105,6 +105,7 @@ Spring proporciona las dependencias a través del constructor. Esto reduce el ac
 - La configuración actual utiliza H2 en memoria con `MODE=PostgreSQL`. Es útil para desarrollo y pruebas, pero no constituye una conexión a una instancia PostgreSQL ni ofrece persistencia entre reinicios.
 - Las estrategias de viaje del ejercicio contienen una lista reducida de países Schengen a modo de ejemplo. No deben interpretarse como una fuente normativa o exhaustiva de requisitos de entrada.
 - Los ejercicios Strategy, Observer, Factory y Composite están implementados como ejercicios de pruebas, no como funcionalidades expuestas por los endpoints REST de la aplicación.
+- **Corrección puntual en `GetCustomerQuery`:** se ha mantenido la corrección de la selección del criterio de búsqueda por pasaporte o identificador. La lógica anterior evaluaba las condiciones de forma invertida y podía consultar con un valor vacío o no ejecutar la búsqueda correspondiente cuando se proporcionaba un pasaporte. Se ajustó para priorizar la búsqueda por pasaporte cuando este tiene contenido y, en su ausencia, buscar por identificador. Esta modificación se conserva porque, sin ella, la consulta de clientes no seleccionaría correctamente el criterio solicitado y la funcionalidad de recuperación no sería fiable. Se deja constancia de que es una excepción explícita a la indicación del enunciado de no modificar Application: se ha priorizado corregir el comportamiento funcional de la consulta frente al cumplimiento literal de esa restricción.
 
 ## 4. Verificación
 
